@@ -115,25 +115,35 @@ function initWebSocket() {
         available_audio_elements++;
         AudioContext = window.AudioContext || window.webkitAudioContext;
         //audioContext_tts = new AudioContext({ sampleRate: 48000 });
-        audioContext_tts = new AudioContext({
-            latencyHint: 'interactive',
-            numberOfChannels: 1,
+        audioContext_tts = new AudioContext();
+        console.log(e.data.length)
+        audioContext_tts.decodeAudioData(e.data).then(function(audioBuffer) {
+            audio_sources.push(audioBuffer);
+            new_whisper_speech_audio_element("audio-" + available_audio_elements, Math.floor(audioBuffer.duration));
+            
+            let audio_source = audioContext_tts.createBufferSource();
+            audio_source.buffer = audioBuffer;
+            audio_source.connect(audioContext_tts.destination);
+            audio_source.start();
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         });
 
-        let float32Array = new Float32Array(e.data);
-        let audioBuffer = audioContext_tts.createBuffer(1, float32Array.length, audioContext_tts.sampleRate);
-        audioBuffer.getChannelData(0).set(float32Array);
+        // let float32Array = new Float32Array(e.data);
+        // let audioBuffer = audioContext_tts.createBuffer(1, float32Array.length, audioContext_tts.sampleRate);
+        // audioBuffer.getChannelData(0).set(float32Array);
 
-        new_whisper_speech_audio_element("audio-" + available_audio_elements, Math.floor(audioBuffer.duration));
+        // new_whisper_speech_audio_element("audio-" + available_audio_elements, Math.floor(audioBuffer.duration));
 
-        audio_sources.push(audioBuffer);
+        // audio_sources.push(audioBuffer);
+  
+        // audio_source = audioContext_tts.createBufferSource();
+        // audio_source.buffer = audioBuffer;
+        // audio_source.connect(audioContext_tts.destination);
+        // audio_source.start();
 
-        audio_source = audioContext_tts.createBufferSource();
-        audio_source.buffer = audioBuffer;
-        audio_source.connect(audioContext_tts.destination);
-        audio_source.start();
+        // window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
     }
 
     websocket = new WebSocket(websocket_uri);

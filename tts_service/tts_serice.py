@@ -1,15 +1,17 @@
 import functools
-from io import BytesIO
 import time
 import scipy
 import logging
 import numpy as np
+from io import BytesIO
+
 logging.basicConfig(level = logging.INFO)
 
 from websockets.sync.server import serve
 
 from TTS.api import TTS
 import torch
+
 
 # Get device
 
@@ -59,7 +61,13 @@ class SpeechTTS:
             try:
                 start = time.time()
                 wav = self.tts.tts(llm_output)
-                self.output_audio = np.array(wav)
+                wav_norm = np.array(wav) * (32767 / max(0.01, np.max(np.abs(wav))))
+                wav_norm = wav_norm.astype(np.int16)
+                wav_buffer = BytesIO()
+                scipy.io.wavfile.write(wav_buffer, 24000, wav_norm)
+                wav_buffer.seek(0)
+                self.output_audio = wav_buffer.read() 
+                # self.output_audio = np.array(wav)
                 inference_time = time.time() - start
                 logging.info(f"[WhisperSpeech INFO:] TTS inference done in {inference_time} ms.\n")
             except TimeoutError:   
@@ -67,7 +75,9 @@ class SpeechTTS:
             
             if self.eos and self.output_audio is not None:
                 try:
-                    websocket.send(self.output_audio.tobytes())
+                    #websocket.send(self.output_audio.tobytes())
+                    websocket.send(self.output_audio)
+
                 except Exception as e:
                     logging.error(f"[WhisperSpeech ERROR:] Audio error: {e}")
 

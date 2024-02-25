@@ -119,7 +119,7 @@ class TranscriptionServer:
         
         if self.transcriber is None:
             self.transcriber = WhisperModel(
-                "medium.en",  # "small" if multilingual else "small.en"
+                "small.en",  # "small" if multilingual else "small.en"
                 device='cuda',
                 compute_type="int8",
                 local_files_only=False,

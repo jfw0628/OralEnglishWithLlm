@@ -53,9 +53,10 @@ def main():
     llm_process.start()
 
 
-    llm_process.join()
     whisper_process.join()
     tts_process.join()
+    llm_process.join()
+
 
 
 if __name__ == "__main__":
