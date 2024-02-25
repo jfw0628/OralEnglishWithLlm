@@ -190,6 +190,8 @@ class TranscriptionServer:
             host (str): The host address to bind the server.
             port (int): The port number to bind the server.
         """
+        logging.info('llm service started')
+
         with serve(
             functools.partial(
                 self.recv_audio,

@@ -14,7 +14,8 @@ from langchain.chains import LLMChain, ConversationChain
 from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig, pipeline, BitsAndBytesConfig, \
     CodeGenTokenizer
 from langchain_community.llms import HuggingFacePipeline
-from langchain.memory import ConversationSummaryMemory, ChatMessageHistory, ConversationBufferMemory
+from langchain.memory import ConversationSummaryMemory, ChatMessageHistory, ConversationBufferMemory, \
+    ConversationBufferWindowMemory
 from langchain.prompts.prompt import PromptTemplate
 
 class LLMEngine:
@@ -66,7 +67,7 @@ AI:"""
 
         prompt = PromptTemplate(input_variables=["history", "input"], template=template)
         self.conversation = ConversationChain(
-            llm=local_llm, verbose=True, prompt=prompt, memory=ConversationBufferMemory()
+            llm=local_llm, verbose=True, prompt=prompt, memory=ConversationBufferWindowMemory(k=3)
         )
 
         logging.info("[LLM INFO:] Loaded LLM Engine.")
@@ -83,6 +84,7 @@ AI:"""
             streaming_interval=4,
             debug=True,
     ):
+        logging.info('llm service started')
 
         conversation_history = {}
         self.init_model()
@@ -107,7 +109,7 @@ AI:"""
                 llm_output = llm_output.replace('\n', "<br>")
                 self.infer_time = time.time() - start
                 self.eos = transcription_output["eos"]
-                logging.info(f"[LLM INFO:] Running LLM Inference with "
+                logging.info(f"[LLM INFO:] Running LLM Inference  with "
                              f"WhisperLive prompt: {prompt}, eos: {self.eos},"
                              f" llm output: {llm_output}, infer_time: {self.infer_time}")
                 llm_queue.put({
@@ -117,8 +119,8 @@ AI:"""
                     "latency": self.infer_time
                 })
                 audio_queue.put({"llm_output": llm_output, "eos": self.eos})
-
-
+ 
+ 
 def main():
     llm = LLMEngine()
     llm.init_model()

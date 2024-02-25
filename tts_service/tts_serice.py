@@ -1,6 +1,9 @@
 import functools
+from io import BytesIO
 import time
+import scipy
 import logging
+import numpy as np
 logging.basicConfig(level = logging.INFO)
 
 from websockets.sync.server import serve
@@ -22,8 +25,9 @@ class SpeechTTS:
 
     def run(self, host, port, audio_queue=None):
         # initialize and warmup model
+        print(1, host, port)
         self.initialize_model()
-        for i in range(1): self.tts.tts("Hello, I am warming up.")
+        self.tts.tts("Hello, I am warming up.")
 
         with serve(
             functools.partial(self.start_tts, audio_queue=audio_queue), 
@@ -40,6 +44,7 @@ class SpeechTTS:
             if audio_queue.qsize() != 0:
                 continue
 
+            # llm_response = {'llm_output': "hello, how are you?", 'eos': True}
             # check if this websocket exists
             try:
                 websocket.ping()
@@ -53,14 +58,13 @@ class SpeechTTS:
 
             try:
                 start = time.time()
-                audio = self.tts.tts(llm_output.strip())
+                wav = self.tts.tts(llm_output)
+                self.output_audio = np.array(wav)
                 inference_time = time.time() - start
                 logging.info(f"[WhisperSpeech INFO:] TTS inference done in {inference_time} ms.\n")
-                self.output_audio = audio.cpu().numpy()
-                self.last_llm_response = llm_output.strip()
-            except TimeoutError:
+            except TimeoutError:   
                 pass
-
+            
             if self.eos and self.output_audio is not None:
                 try:
                     websocket.send(self.output_audio.tobytes())
