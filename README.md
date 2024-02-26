@@ -31,6 +31,7 @@ python server.py
 
 Below are some screenshots or videos demonstrating the functionality of the platform. 
 ![alt text](image.png)
+![image](https://github.com/jfw0628/OralEnglishWithLlm/assets/140132647/88ab4c18-d1b0-4938-92a3-7fc99d6585f9)
 
 
 ## License:
