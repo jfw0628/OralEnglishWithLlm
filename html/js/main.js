@@ -199,7 +199,7 @@ function initWebSocket() {
             new_transcription_element_state = true;
         }
       } else if ("llm_output" in data) {
-            new_transcription_element("Phi-2", "Phi.svg");
+            new_transcription_element("AI-Teacher", "Phi.svg");
             new_text_element("<p>" +  data["llm_output"] + "</p>", "llm-" + available_transcription_elements);
       }
 
@@ -265,10 +265,10 @@ function new_llm_time_element(time) {
     text_container.style.maxWidth = "500px";
 
     var first_response_text_element = document.createElement("div");
-    first_response_text_element.innerHTML = "<span>Phi-2 first response time: " + time + "ms</span>";
+    first_response_text_element.innerHTML = "<span>AI Teacher first response time: " + time + "ms</span>";
 
     var complete_response_text_element = document.createElement("div");
-    complete_response_text_element.innerHTML = "<span>Phi-2 complete response time: " + time + "ms</span>";
+    complete_response_text_element.innerHTML = "<span>AI Teacher complete response time: " + time + "ms</span>";
 
     var dummy_element = document.createElement("div");
 

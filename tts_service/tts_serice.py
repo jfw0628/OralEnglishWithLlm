@@ -1,5 +1,6 @@
 import functools
 import time
+import re
 import scipy
 import logging
 import numpy as np
@@ -37,6 +38,35 @@ class SpeechTTS:
             ) as server:
             server.serve_forever()
 
+    @staticmethod
+    def remove_emojis(text):
+        # Define a regex pattern to match emojis
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # Emoticons
+            "\U0001F300-\U0001F5FF"  # Symbols & Pictographs
+            "\U0001F680-\U0001F6FF"  # Transport & Map Symbols
+            "\U0001F1E0-\U0001F1FF"  # Flags (iOS)
+            "\U00002500-\U00002BEF"  # Chinese/Japanese/Korean characters
+            "\U00002702-\U000027B0"
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "\U0001f926-\U0001f937"
+            "\U00010000-\U0010ffff"
+            "\u2640-\u2642"
+            "\u2600-\u2B55"
+            "\u200d"
+            "\u23cf"
+            "\u23e9"
+            "\u231a"
+            "\ufe0f"  # dingbats
+            "\u3030"
+            "]+"
+        )
+        # Remove emojis from the text
+        return emoji_pattern.sub(r'', text)
+
+
     def start_tts(self, websocket, audio_queue=None):
         self.eos = False
         self.output_audio = None
@@ -56,6 +86,7 @@ class SpeechTTS:
                 break
             
             llm_output = llm_response["llm_output"]
+            llm_output = self.remove_emojis(llm_output)
             self.eos = llm_response["eos"]
 
             try:

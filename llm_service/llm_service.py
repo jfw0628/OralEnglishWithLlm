@@ -24,51 +24,49 @@ class LLMEngine:
         self.eos = False
         self.infer_time = 0
         self.conversation = None
+        self.model = None
+        self.tokenizer = None
+        self.template = None
+        self.history = []
 
 
     def init_model(self):
         #model = "microsoft/phi-2"
-        model_name = 'openbmb/MiniCPM-2B-sft-fp32'
-        tokenizer = AutoTokenizer.from_pretrained(model_name,
+        # model_name = 'openbmb/MiniCPM-2B-sft-fp32'
+        model_name = 'openbmb/MiniCPM-2B-dpo-fp16'
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                   trust_remote_code=True,
                                                   use_fast=True)
-        model = AutoModelForCausalLM.from_pretrained(model_name,
+        self.model = AutoModelForCausalLM.from_pretrained(model_name,
                                                      torch_dtype=torch.float16,
                                                      trust_remote_code=True,
                                                      device_map={"": 0})
         
         pipe = pipeline(
             "text-generation",
-            model=model,
+            model=self.model,
             do_sample=True,
-            tokenizer=tokenizer,
+            tokenizer=self.tokenizer,
             max_length=256,
-            max_new_tokens=50,
             temperature=0.3,
             top_p=0.3,
             repetition_penalty=1.2
         )
         local_llm = HuggingFacePipeline(pipeline=pipe)
 
-        template = """The following is a friendly conversation between a human and an AI. The AI provides specific details from its context. 
-If the AI does not know the answer to a question, it truthfully says it does not know. Make the answer brief and valueable.
-examples: 
+        self.template = """Act as an English teacher, talk with Student Marcus to improve their spoken English. 
+The reply should be short and simple, better length would be less than 60 words, since it is for the oral English. 
 
-User: How are you?
-AI: I can't complain but sometimes I still do.
+History:
+{}
 
-Relevant Information:
+User: {}
+Alice"""
 
-{history}
-
-Conversation:
-Human: {input}
-AI:"""
-
-        prompt = PromptTemplate(input_variables=["history", "input"], template=template)
-        self.conversation = ConversationChain(
-            llm=local_llm, verbose=True, prompt=prompt, memory=ConversationBufferWindowMemory(k=3)
-        )
+        # prompt = PromptTemplate(input_variables=["history", "input"], template=template)
+        # self.conversation = ConversationChain(
+        #     llm=local_llm, verbose=True, prompt=prompt, memory=ConversationBufferWindowMemory(k=3)
+        # )
 
         logging.info("[LLM INFO:] Loaded LLM Engine.")
 
@@ -101,15 +99,20 @@ AI:"""
 
             prompt = transcription_output['prompt'].strip()
 
-            # if prompt is same but EOS is True, we need that to send outputs to websockets
-
             if transcription_output["eos"]:
                 start = time.time()
-                llm_output = self.conversation.predict(input=prompt)
-                llm_output = llm_output.replace('\n', "<br>")
+                chat_info = self.template.format(prompt, 
+                                                 '\n'.join(["{}: {}".format(i['role'], i['content'][:60])  for i in self.history]))
+                logging.info(f'Input to model is {chat_info}')
+                llm_output, self.history = self.model.chat(self.tokenizer, 
+                                                       chat_info, 
+                                                       temperature=0.3, 
+                                                       top_p=0.4, 
+                                                       max_length=256)
+                llm_output = llm_output.replace('\n', "<br>") 
                 self.infer_time = time.time() - start
                 self.eos = transcription_output["eos"]
-                logging.info(f"[LLM INFO:] Running LLM Inference  with "
+                logging.info(f"[LLM INFO:] Running LLM Inference with "
                              f"WhisperLive prompt: {prompt}, eos: {self.eos},"
                              f" llm output: {llm_output}, infer_time: {self.infer_time}")
                 llm_queue.put({
@@ -119,13 +122,17 @@ AI:"""
                     "latency": self.infer_time
                 })
                 audio_queue.put({"llm_output": llm_output, "eos": self.eos})
+
+            # don't response to every chat
+            while transcription_queue.qsize() != 0:
+                transcription_queue.get()
  
  
 def main():
     llm = LLMEngine()
     llm.init_model()
 
-    print(llm.conversation_with_summary.predict(input='hello, how are you today'))
+    print(llm.model.chat(input='hello, how are you today'))
 
 if "__main__" == __name__:
     main()

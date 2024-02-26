@@ -1,6 +1,12 @@
 import torch
+import sys
 
 import multiprocessing
+
+from http.server import SimpleHTTPRequestHandler
+from http.server import CGIHTTPRequestHandler
+from http.server import ThreadingHTTPServer
+from functools import partial
 
 from whisper_service.whisper_service import TranscriptionServer
 from llm_service.llm_service import  LLMEngine
@@ -53,12 +59,27 @@ def main():
     llm_process.start()
 
 
-    whisper_process.join()
-    tts_process.join()
-    llm_process.join()
+
+    bind = '0.0.0.0'
+    port = 8000
+    handler_class = partial(SimpleHTTPRequestHandler, directory="./html")
+
+    with ThreadingHTTPServer((bind, port), handler_class) as httpd:
+        print(
+            f"Serving HTTP on {bind} port {port} "
+            f"(http://{bind}:{port}/) ..."
+        )
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nKeyboard interrupt received, exiting.")
+            whisper_process.join()
+            tts_process.join()
+            llm_process.join()
+            sys.exit(0)
 
 
-
+    
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
     main()

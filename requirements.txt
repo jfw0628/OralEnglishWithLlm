@@ -1,1 +1,5 @@
 websockets
+scipy
+transformers
+langchains
+ctranslate2
